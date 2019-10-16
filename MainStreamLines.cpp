@@ -17,6 +17,16 @@ struct VectorField {
     int size;
     sf::VertexArray* vecotrfields;
     sf::VertexArray* vectorTriangleDirection;
+    ~VectorField() {
+        if (vecotrfields) {
+            delete[] vecotrfields;
+        }
+        if (vectorTriangleDirection) {
+            delete[] vectorTriangleDirection;
+        }
+        vecotrfields = nullptr;
+        vectorTriangleDirection = nullptr;
+    }
 
 };
 //Psudo Ransom number generator
