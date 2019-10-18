@@ -29,7 +29,7 @@ struct VectorField {
     }
 
 };
-//Psudo Ransom number generator
+//Psudo Random number generator
 std::random_device rd;
 std::mt19937_64 gen(rd());
 std::uniform_int_distribution<int> rnd(0, DATASIZE-1);
@@ -43,12 +43,37 @@ VectorField plotStreamBends(sf::Vector2f field[][DATASIZE], sf::Color colour = s
 
 void plotLines(int x1, int y1, float x2, float y2, sf::VertexArray &vectors, sf::Color colour = sf::Color::Green);
 void plotLines(sf::Vector2f from, sf::Vector2f to, sf::VertexArray &vectors, sf::Color colour = sf::Color::Green);
-void plotPoints(sf::Vector2f point, std::vector<sf::CircleShape>& circles);
+void plotPoints(sf::Vector2f point, std::vector<sf::CircleShape>& circles, sf::Color colour = sf::Color::Red);
 void plotDirectionTriangles(sf::Vector2f point, sf::Vector2f direction, std::vector<sf::CircleShape>& circles);
 
 sf::VertexArray getDirectionTriangles(sf::Vector2f point, sf::Vector2f direction, sf::Color colour = sf::Color::Green);
 
 
+
+void plotVectors(sf::Vector2f vectors[][DATASIZE], std::vector<sf::CircleShape>&points, sf::Color colour = sf::Color::Red) {
+    float max, min;
+    max = min = magnitude(vectors[0][0]);
+    for (int i = 0; i < DATASIZE; i++) {
+        for (int j = 0; j < DATASIZE; i++) {
+            float mag = magnitude(vectors[i][j]);
+            if (mag > max) {
+                max = mag;
+            }
+            if (mag < min) {
+                min = mag;
+            }
+        }
+    }
+    for (int i = 0; i < DATASIZE; i++) {
+        for (int j = 0; j < DATASIZE; j++) {
+            float mag = magnitude(vectors[i][j]);
+            int r = colour.r*((mag - min) / (max - min));
+            int g = colour.g*((mag - min) / (max - min));
+            int b = colour.b*((mag - min) / (max - min));
+            plotPoints(vectors[i][j], points, sf::Color(r,g,b));
+        }
+    }
+}
 
 
 
@@ -90,7 +115,7 @@ int main() {
 
     VectorField vfieldbend = plotStreamBends(dataVectors, sf::Color::Blue, 1000, 100, 0.5, SCREENSIZE / DATASIZE);
     VectorField vfieldLine = plotStreamLines(dataVectors, sf::Color::Cyan, 1000, 2, SCREENSIZE / DATASIZE);
-
+    plotVectors(dataVectors, triangles);
 
     while (windowline.isOpen()) {
         sf::Event eventline;
@@ -107,9 +132,8 @@ int main() {
         }
 
         windowbend.clear();
-        for (int i = 0; i < vfieldbend.size; i++) {
-            windowbend.draw(vfieldbend.vecotrfields[i]);
-            windowbend.draw(vfieldbend.vectorTriangleDirection[i]);
+        for (auto& point : triangles) {
+            windowbend.draw(point);
         }
         windowbend.display();
         windowline.clear();
@@ -167,11 +191,11 @@ void plotLines(sf::Vector2f from, sf::Vector2f to, sf::VertexArray &vectors, sf:
     vectors.append(toVex);
 }
 
-void plotPoints(sf::Vector2f point, std::vector<sf::CircleShape>& circles) {
+void plotPoints(sf::Vector2f point, std::vector<sf::CircleShape>& circles, sf::Color colour) {
     sf::CircleShape* newcircle = new sf::CircleShape;
     newcircle->setRadius(2);
     newcircle->setPosition(point);
-    newcircle->setFillColor(sf::Color::Red);
+    newcircle->setFillColor(colour);
     circles.push_back(*newcircle);
 }
 

@@ -1,6 +1,9 @@
 #include "SFML_Vector_OP.h"
+float magnitude(sf::Vector2f v) {
+    return sqrt(v.x*v.x + v.y*v.y);
+}
 sf::Vector2f normilize(sf::Vector2f v) {
-    float mag = sqrt(v.x*v.x + v.y*v.y);
+    float mag = magnitude(v);
     if (mag != 0) {
         return v / mag;
     }
