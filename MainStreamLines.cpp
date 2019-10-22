@@ -1,11 +1,10 @@
 #include "SFML\Graphics.hpp"
 #include <fstream> //To read the file
 #include <iostream> //Debug messages
-#include <iomanip> //
 #include <random> //To generete random numbers
 #include <vector> //To easier keep arrays
-#include <algorithm> //Min and max
-#include "SFML_Vector_OP.h" //Help with vector
+//I know SFML has vector OP's but they for some reason does not work for me
+#include "SFML_Vector_OP.h" //Help with vector operators
 
 
 #define PI 3.14159265
@@ -33,30 +32,35 @@ struct VectorField {
         */
         size = 0;
     }
-    
-
 };
 //Psudo Random number generator
 std::random_device rd;
 std::mt19937_64 gen(rd());
-std::uniform_int_distribution<int> rnd(0, DATASIZE-1);
-
-sf::Vector2i randomPointInField()
-;
-VectorField plotStreamLines(const sf::Vector2f field[][DATASIZE], sf::Color colour = sf::Color::Cyan,
-                            int nrVectors = 100, float step = 1, float scale = 1);
-VectorField plotStreamBends(const sf::Vector2f field[][DATASIZE], sf::Color colour = sf::Color::Cyan,
-                                int nrVectors = 100, int stepForVector = 100, float step = 0.1, float scale = 1);
-
-void plotLines(int x1, int y1, float x2, float y2, sf::VertexArray &vectors, sf::Color colour = sf::Color::Green);
-void plotLines(const sf::Vector2f from, const sf::Vector2f to, sf::VertexArray &vectors, sf::Color colour = sf::Color::Green);
-void plotPoints(sf::Vector2f point, std::vector<sf::CircleShape>& circles, sf::Color colour = sf::Color::Red, float radius = 1);
-void plotDirectionTriangles(sf::Vector2f point, sf::Vector2f direction, std::vector<sf::CircleShape>& circles);
-
-sf::VertexArray getDirectionTriangles(sf::Vector2f point, sf::Vector2f direction, sf::Color colour = sf::Color::Green);
-
-
-
+//Get vector, where x is from 0 to maxX -1 and y is 0 to maxY - 1
+sf::Vector2i randomPointInField(int maxX, int maxY);
+//Plot vectorfield's stream with lines of the size of step
+VectorField plotStreamLines(const sf::Vector2f* field, int X, int Y,
+                            sf::Color colour = sf::Color::Cyan, int nrVectors = 100,
+                            float step = 1, float scale = 1);
+//Plot vector field stream line where we take some step for each vector with the size of step
+VectorField plotStreamBends(const sf::Vector2f* field, int X, int Y, 
+                            sf::Color colour = sf::Color::Cyan, int nrVectors = 100, 
+                            int stepForVector = 100, float step = 0.1, float scale = 1);
+//Plot a line from (x1,y1) to (x2, y2), and append it to the VertexArray
+void plotLines(int x1, int y1, float x2, float y2, sf::VertexArray &vectors,
+               sf::Color colour = sf::Color::Green);
+//Plot a line from 'from' to 'to' and append to the VertexArray
+void plotLines(const sf::Vector2f from, const sf::Vector2f to,
+               sf::VertexArray &vectors, sf::Color colour = sf::Color::Green);
+//Plot a point at point and push it to the points std::vector
+void plotPoints(sf::Vector2f point, std::vector<sf::CircleShape>& points,
+                sf::Color colour = sf::Color::Red, float radius = 1);
+//create a direction triangle as a VertexArtay at point in the direction of direction
+sf::VertexArray getDirectionTriangles(sf::Vector2f point, sf::Vector2f direction,
+                                      sf::Color colour = sf::Color::Green);
+//Plot vectors based on their position, and with colour based on magnitute
+//X is the width of the plotting
+//Y is the height of the plotting
 void plotVectors(const sf::Vector2f* vectors, const int X, const int Y,
                  std::vector<sf::CircleShape>& points, sf::Color colour1, sf::Color colour2, float scale);
 
@@ -150,8 +154,10 @@ int main() {
     std::vector<sf::CircleShape> derivedShape;
     std::vector<sf::CircleShape> curlShape;
     int nrVec = 1000;
-    VectorField vfieldbend = plotStreamBends(dataVectors, sf::Color::Blue, 1000, 100, 0.5, SCREENSIZE / DATASIZE);
-    VectorField vfieldLine = plotStreamLines(dataVectors, sf::Color::Cyan, 1000, 2, SCREENSIZE / DATASIZE);
+    VectorField vfieldbend = plotStreamBends(&dataVectors[0][0], DATASIZE, DATASIZE,
+                                sf::Color::Blue, 1000, 100, 0.5, SCREENSIZE / DATASIZE);
+    VectorField vfieldLine = plotStreamLines(&dataVectors[0][0], DATASIZE, DATASIZE,
+                                sf::Color::Cyan, 1000, 2, SCREENSIZE / DATASIZE);
     sf::Vector2f * speed = &dataVectors[0][0];
     plotVectors(&dataVectors[0][0], DATASIZE, DATASIZE,
                 speedShape, sf::Color::Yellow, sf::Color::Blue, SCREENSIZE/DATASIZE);
@@ -216,31 +222,32 @@ int main() {
     return 0;
 }
 
-VectorField plotStreamLines(const sf::Vector2f field[][DATASIZE], sf::Color colour,
-                                  int nrVectors, float step, float scale) {
-    return plotStreamBends(field, colour, nrVectors, 1, step, scale);
+VectorField plotStreamLines(const sf::Vector2f* field, int X, int Y,
+                            sf::Color colour, int nrVectors,
+                            float step, float scale) {
+    return plotStreamBends(field, X, Y, colour, nrVectors, 1, step, scale);
 }
-
-VectorField plotStreamBends(const sf::Vector2f field[][DATASIZE], sf::Color colour,
-                                int nrVectors , int stepForVector, float step, float scale) {
+VectorField plotStreamBends(const sf::Vector2f* field, int X, int Y,
+                            sf::Color colour, int nrVectors,
+                            int stepForVector, float step, float scale) {
     VectorField stream;
     stream.vecotrfields = new sf::VertexArray[nrVectors];
     stream.size = nrVectors;
     stream.vectorTriangleDirection = new sf::VertexArray[nrVectors];
     for (int i = 0; i < nrVectors; i++) {
         stream.vecotrfields[i] = sf::VertexArray(sf::LinesStrip);
-        sf::Vector2i randVec = randomPointInField();
+        sf::Vector2i randVec = randomPointInField(X,Y);
         sf::Vector2f from = (sf::Vector2f) randVec * scale;
-        sf::Vector2f to = (randVec + field[randVec.x][randVec.y] * step) * scale;
+        sf::Vector2f to = (randVec + field[X*randVec.x + randVec.y] * step) * scale;
         for (int j = 0; j < stepForVector; j++) {
             plotLines(from, to, stream.vecotrfields[i], colour);
             from = to;
             int x = (from.x / scale);
             int y = (from.y / scale);
-            if (x < 0 || y < 0 || x >= DATASIZE || y >= DATASIZE) {
+            if (x < 0 || y < 0 || x >= X || y >= Y) {
                 break;
             }
-            to = from + field[x][y] * step;
+            to = from + field[X*x + y] * step;
 
         }
         stream.vectorTriangleDirection[i] = getDirectionTriangles(to, to - from, colour);
@@ -267,17 +274,6 @@ void plotPoints(sf::Vector2f point, std::vector<sf::CircleShape>& circles, sf::C
     newcircle->setPosition(point + (radius/2));
     newcircle->setFillColor(colour);
     circles.push_back(*newcircle);
-}
-
-void plotDirectionTriangles(sf::Vector2f point, sf::Vector2f direction, std::vector<sf::CircleShape> &triangles) {
-    double deg = atan(direction.y / direction.y);
-    sf::CircleShape* triangle = new sf::CircleShape(2, 3);
-    triangle->setOrigin(triangle->getRadius(), triangle->getRadius());
-    triangle->setPosition(point);
-    triangle->setFillColor(sf::Color(64, 224, 208, 255));
-    triangle->rotate(deg * DEG);
-    triangles.push_back(*triangle);
-    std::cout << "Created triangle in (" << point.x << "," << point.y << ")\n";
 }
 
 sf::VertexArray getDirectionTriangles(sf::Vector2f point, sf::Vector2f direction, sf::Color colour) {
@@ -321,7 +317,9 @@ void plotVectors(const sf::Vector2f* vectors, int X, int Y,
     }
 }
 
-sf::Vector2i randomPointInField() {
-    return sf::Vector2i(rnd(gen), rnd(gen));
+sf::Vector2i randomPointInField(int x, int y) {
+    std::uniform_int_distribution<int> rndx(0, x - 1);
+    std::uniform_int_distribution<int> rndy(0, y - 1);
+    return sf::Vector2i(rndx(gen), rndy(gen));
 }
 
