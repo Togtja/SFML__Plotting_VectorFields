@@ -65,33 +65,8 @@ void plotVectors(const sf::Vector2f* vectors, const int X, const int Y,
                  std::vector<sf::CircleShape>& points, sf::Color colour1, sf::Color colour2, float scale);
 
 //TEMP/DEBUG
-void plotVectors(const float* vectors, int X, int Y, 
-                 std::vector<sf::CircleShape>& points, sf::Color colour1, sf::Color colour2, float scale) {
-    float max, min;
-    max = min = vectors[0];
-    for (int i = 0; i < X; i++) {
-        for (int j = 0; j < Y; j++) {
-            float mag = vectors[i*X + j];
-            if (mag > max) {
-                max = mag;
-            }
-            if (mag < min) {
-                min = mag;
-            }
-        }
-    }
-    std::cout << "Max = " << max << "\tMin = " << min << "\n\n";
-    for (int i = 0; i < X; i++) {
-        for (int j = 0; j < Y; j++) {
-            float mag = vectors[i*X + j];
-            float frac = ((mag - min) / (max - min));;
-            int r = (colour2.r - colour1.r) * frac + colour1.r;
-            int g = (colour2.g - colour1.g) * frac + colour1.g;
-            int b = (colour2.b - colour1.b) * frac + colour1.b;
-            plotPoints(sf::Vector2f(i * scale, j * scale), points, sf::Color(r, g, b), scale / 2 + 1);
-        }
-    }
-}
+void plotVectors(const float* vectors, int X, int Y,
+                 std::vector<sf::CircleShape>& points, sf::Color colour1, sf::Color colour2, float scale);
 void plotVectors(const std::vector<float>& vectors, int X, int Y,
                  std::vector<sf::CircleShape>& points, sf::Color colour1, sf::Color colour2, float scale) {
 
@@ -120,12 +95,13 @@ int main() {
         for (int j = 0; j < DATASIZE; j++) {
             data >> xOfVec[i][j];
         }
-        std::cout << std::endl;
     }
+    float speed[DATASIZE*DATASIZE];
     for (int i = 0; i < DATASIZE; i++) {
         for (int j = 0; j < DATASIZE; j++) {
             data >> yOfVec[i][j];
             dataVectors[i][j] = sf::Vector2f(xOfVec[i][j], yOfVec[i][j]);
+            speed[i*DATASIZE + j] = magnitude(dataVectors[i][j]);
         }
     }
     data.close();
@@ -137,35 +113,33 @@ int main() {
     //from 1 to and including 98 (< 99)
     for (int i = 1; i < DATASIZE-1; i++) {
         for (int j = 1; j < DATASIZE-1; j++) {   
-            float px = (dataVectors[i + 1][j].x - dataVectors[i - 1][j].x) / 2;
+            //px is P/dx
+            float px = (dataVectors[i][j + 1].x - dataVectors[i][j - 1].x) / 2;
             //qy is Q/dy
-            float qy = (dataVectors[i][j + 1].y - dataVectors[i][j - 1].y) / 2;
+            float qy = (dataVectors[i + 1][j].y - dataVectors[i - 1][j].y) / 2;
             //py is P/dy
-            float py = (dataVectors[i + 1][j].y - dataVectors[i - 1][j].y) / 2;
-            //qx is Q/dy
-            float qx = (dataVectors[i][j + 1].x - dataVectors[i][j - 1].x) / 2;
+            float py = (dataVectors[i + 1][j].x - dataVectors[i - 1][j].x) / 2;
+            //qx is Q/dx
+            float qx = (dataVectors[i][j + 1].y - dataVectors[i][j - 1].y) / 2;
             
             //Subtract -1 so that i goes from 0 to and including 97
             derived[(i - 1) * DERRIVED + (j - 1)] = px + qy;
-            curl[(i - 1) * DERRIVED + (j - 1)] = py - qx;
+            curl[(i - 1) * DERRIVED + (j - 1)] = qx - py;
         }
     }
     std::vector<sf::CircleShape> speedShape;
     std::vector<sf::CircleShape> derivedShape;
     std::vector<sf::CircleShape> curlShape;
-    int nrVec = 1000;
     VectorField vfieldbend = plotStreamBends(&dataVectors[0][0], DATASIZE, DATASIZE,
                                 sf::Color::Blue, 1000, 100, 0.5, SCREENSIZE / DATASIZE);
-    VectorField vfieldLine = plotStreamLines(&dataVectors[0][0], DATASIZE, DATASIZE,
-                                sf::Color::Cyan, 1000, 2, SCREENSIZE / DATASIZE);
-    sf::Vector2f * speed = &dataVectors[0][0];
-    plotVectors(&dataVectors[0][0], DATASIZE, DATASIZE,
-                speedShape, sf::Color::Yellow, sf::Color::Blue, SCREENSIZE/DATASIZE);
+
+    plotVectors(&speed[0], DATASIZE, DATASIZE,
+                speedShape, sf::Color::Blue, sf::Color::Yellow, SCREENSIZE/DATASIZE);
 
     plotVectors(&derived[0], DERRIVED, DERRIVED,
-                derivedShape, sf::Color::Yellow, sf::Color::Blue, SCREENSIZE / DERRIVED);
+                derivedShape, sf::Color::Blue, sf::Color::Yellow, SCREENSIZE / DERRIVED);
     plotVectors(&curl[0], DERRIVED, DERRIVED,
-                curlShape, sf::Color::Yellow, sf::Color::Blue, SCREENSIZE / DERRIVED);
+                curlShape, sf::Color::Blue, sf::Color::Yellow, SCREENSIZE / DERRIVED);
 
 
     while (windowspeed.isOpen() || windowbend.isOpen()
@@ -305,14 +279,41 @@ void plotVectors(const sf::Vector2f* vectors, int X, int Y,
             }
         }
     }
-    for (int i = 0; i < DATASIZE; i++) {
-        for (int j = 0; j < DATASIZE; j++) {
+    for (int i = 0; i < Y; i++) {
+        for (int j = 0; j < X; j++) {
             float mag = magnitude(vectors[i*X + j]);
             float frac = ((mag - min) / (max - min));;
             int r = (colour2.r - colour1.r) * frac + colour1.r;
             int g = (colour2.g - colour1.g) * frac + colour1.g;
             int b = (colour2.b - colour1.b) * frac + colour1.b;
-            plotPoints(sf::Vector2f(i * scale, j * scale), points, sf::Color(r, g, b), scale/2 + 1);
+            plotPoints(sf::Vector2f(j * scale, i * scale), points, sf::Color(r, g, b), scale/2 + 1);
+        }
+    }
+}
+void plotVectors(const float* vectors, int X, int Y,
+                 std::vector<sf::CircleShape>& points, sf::Color colour1, sf::Color colour2, float scale) {
+    float max, min;
+    //Find the min in the array, and the max in the array
+    max = min = vectors[0];
+    for (int i = 0; i < Y; i++) {
+        for (int j = 0; j < X; j++) {
+            float mag = vectors[i*X + j];
+            if (mag > max) {
+                max = mag;
+            }
+            if (mag < min) {
+                min = mag;
+            }
+        }
+    }
+    for (int i = 0; i < Y; i++) {
+        for (int j = 0; j < X; j++) {
+            float mag = vectors[i*X + j];
+            float frac = ((mag - min) / (max - min));;
+            int r = (colour2.r - colour1.r) * frac + colour1.r;
+            int g = (colour2.g - colour1.g) * frac + colour1.g;
+            int b = (colour2.b - colour1.b) * frac + colour1.b;
+            plotPoints(sf::Vector2f(j * scale, i * scale), points, sf::Color(r, g, b), scale / 2 + 1);
         }
     }
 }
