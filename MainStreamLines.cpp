@@ -110,7 +110,7 @@ int main() {
     //DATASIZE == 100, and DERRIVED == 98
     float curl[DERRIVED*DERRIVED];
     //Derivativ of the vectorfield
-    float derived[DERRIVED*DERRIVED];
+    float divergence[DERRIVED*DERRIVED];
     //from 1 to and including 98 (< 99)
     for (int i = 1; i < DATASIZE-1; i++) {
         for (int j = 1; j < DATASIZE-1; j++) {   
@@ -124,7 +124,7 @@ int main() {
             float qx = (dataVectors[i][j + 1].y - dataVectors[i][j - 1].y) / 2;
             
             //Subtract -1 so that i goes from 0 to and including 97
-            derived[(i - 1) * DERRIVED + (j - 1)] = px + qy;
+            divergence[(i - 1) * DERRIVED + (j - 1)] = px + qy;
             curl[(i - 1) * DERRIVED + (j - 1)] = qx - py;
         }
     }
@@ -137,7 +137,7 @@ int main() {
     plotVectors(&speed[0], DATASIZE, DATASIZE,
                 speedShape, sf::Color::Blue, sf::Color::Yellow, SCREENSIZE/DATASIZE);
 
-    plotVectors(&derived[0], DERRIVED, DERRIVED,
+    plotVectors(&divergence[0], DERRIVED, DERRIVED,
                 derivedShape, sf::Color::Blue, sf::Color::Yellow, SCREENSIZE / DERRIVED);
     plotVectors(&curl[0], DERRIVED, DERRIVED,
                 curlShape, sf::Color::Blue, sf::Color::Yellow, SCREENSIZE / DERRIVED);
@@ -269,8 +269,8 @@ void plotVectors(const sf::Vector2f* vectors, int X, int Y,
                  std::vector<sf::CircleShape>& points, sf::Color colour1, sf::Color colour2, float scale) {
     float max, min;
     max = min = magnitude(vectors[0]);
-    for (int i = 0; i < X; i++) {
-        for (int j = 0; j < Y; j++) {
+    for (int i = 0; i < Y; i++) {
+        for (int j = 0; j < X; j++) {
             float mag = magnitude(vectors[i*X + j]);
             if (mag > max) {
                 max = mag;
@@ -307,6 +307,7 @@ void plotVectors(const float* vectors, int X, int Y,
             }
         }
     }
+    //Find  suitable values for their colour based on max and min
     for (int i = 0; i < Y; i++) {
         for (int j = 0; j < X; j++) {
             float mag = vectors[i*X + j];
@@ -314,7 +315,8 @@ void plotVectors(const float* vectors, int X, int Y,
             int r = (colour2.r - colour1.r) * frac + colour1.r;
             int g = (colour2.g - colour1.g) * frac + colour1.g;
             int b = (colour2.b - colour1.b) * frac + colour1.b;
-            plotPoints(sf::Vector2f(j * scale, i * scale), points, sf::Color(r, g, b), scale / 2 + 1);
+            plotPoints(sf::Vector2f(j * scale, i * scale),
+                       points, sf::Color(r, g, b), scale / 2 + 1);
         }
     }
 }
