@@ -80,7 +80,6 @@ void plotVectors(const float* vectors, int X, int Y,
             }
         }
     }
-    std::cout << "Max = " << max << "\tMin = " << min << "\n\n";
     for (int i = 0; i < X; i++) {
         for (int j = 0; j < Y; j++) {
             float mag = vectors[i*X + j];
